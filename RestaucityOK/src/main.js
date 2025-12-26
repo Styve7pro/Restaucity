@@ -8,7 +8,7 @@ import Home from "./pages/Home.vue"
 import RestaurantDetail from "./pages/RestaurantDetail.vue"
 import Favorites from "./pages/Favorites.vue"
 import AdminDashboard from "./pages/AdminDashboard.vue"
-import Login from "./pages/login.vue"
+import Login from "./pages/Login.vue"
 
 import { supabase } from "./config/supabaseConfig"
 
