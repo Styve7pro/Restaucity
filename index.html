@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+
+    <title>Restaucity - Découvrez les meilleurs restaurants au Congo-Brazzaville</title>
+    <meta name="description" content="Restaucity est votre guide pour découvrir les meilleurs restaurants à Brazzaville et au Congo. Consultez les menus, photos, avis et réservez facilement." />
+    <meta name="keywords" content="restaurants, Brazzaville, Congo, fastfood, pâtisserie, café, restaurant africain, menu, réservation" />
+    <meta name="author" content="Styve M'BOUMBA" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://restaucity.vercel.app/" />
+
+    <meta name="theme-color" content="#f97316" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Restaucity" />
+
+    <!-- Évite le flash de thème grâce au script inline -->
+    <script>
+      ;(function () {
+        const saved = localStorage.getItem('theme')
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (saved === 'dark' || (!saved && prefersDark)) {
+          document.documentElement.classList.add('dark')
+        }
+      })()
+    </script>
+
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://restaucity.vercel.app/" />
+    <meta property="og:title" content="Restaucity - Découvrez les meilleurs restaurants au Congo-Brazzaville" />
+    <meta property="og:description" content="Trouvez les meilleurs restaurants à Brazzaville. Consultez les menus, photos, avis et réservez facilement." />
+    <meta property="og:image" content="https://restaucity.vercel.app/icons/icon-512x512.jpg" />
+    <meta property="og:locale" content="fr_FR" />
+
+    <link rel="preconnect" href="https://ooctjacjhnwznlnyqjar.supabase.co" />
+    <link rel="dns-prefetch" href="https://ooctjacjhnwznlnyqjar.supabase.co" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <noscript>
+      <div style="padding:20px;text-align:center;background:#f97316;color:white;">
+        <h1>Restaucity</h1>
+        <p>Veuillez activer JavaScript pour utiliser cette application.</p>
+      </div>
+    </noscript>
+
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {})
+        })
+      }
+    </script>
+  </body>
+</html>

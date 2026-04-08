@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #f97316;
+    --color-primary-dark: #ea6c0a;
+    --color-primary-light: #fb923c;
+
+    --color-background: #ffffff;
+    --color-surface: #f8f9fa;
+    --color-surface-dark: #e9ecef;
+
+    --color-text: #1a1a1a;
+    --color-text-secondary: #6c757d;
+    --color-text-light: #adb5bd;
+
+    --color-border: #dee2e6;
+    --color-warning: #ffc107;
+    --color-success: #28a745;
+    --color-error: #dc3545;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark {
+    --color-background: #0f0f0f;
+    --color-surface: #1a1a1a;
+    --color-surface-dark: #262626;
+
+    --color-text: #f5f5f5;
+    --color-text-secondary: #a3a3a3;
+    --color-text-light: #737373;
+
+    --color-border: #404040;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.8);
+  }
+
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    /* Évite le flash au chargement initial */
+    color-scheme: light dark;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  /* Scrollbar masquée utilitaire */
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Safe area pour mobile */
+  .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background-color: var(--color-surface); }
+::-webkit-scrollbar-thumb { background-color: var(--color-text-secondary); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--color-text); }
+
+/* Focus visible */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Transitions globales */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: ease;
+  transition-duration: 150ms;
+}
+
+/* Exclure les transitions sur les animations */
+.animate-spin,
+.animate-pulse,
+[class*='transition-'],
+[class*='duration-'] {
+  transition-property: none;
+}
