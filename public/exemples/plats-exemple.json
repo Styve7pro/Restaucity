@@ -1,0 +1,72 @@
+[
+  {
+    "nom": "Burger Classic",
+    "description": "Bœuf haché 180g, cheddar fondu, salade, tomate, oignons caramélisés, sauce maison",
+    "prix": 4500,
+    "categorie": "Hamburger",
+    "image": ""
+  },
+  {
+    "nom": "Burger Poulet Croustillant",
+    "description": "Filet de poulet pané, coleslaw maison, cornichons, sauce BBQ fumée",
+    "prix": 4000,
+    "categorie": "Hamburger",
+    "image": ""
+  },
+  {
+    "nom": "Pizza Margherita",
+    "description": "Sauce tomate maison, mozzarella fior di latte, basilic frais, filet d'huile d'olive",
+    "prix": 5500,
+    "categorie": "Pizza",
+    "image": ""
+  },
+  {
+    "nom": "Pizza Quatre Fromages",
+    "description": "Mozzarella, gorgonzola, parmesan, chèvre frais, miel de thym",
+    "prix": 6500,
+    "categorie": "Pizza",
+    "image": ""
+  },
+  {
+    "nom": "Salade César",
+    "description": "Romaine croquante, croûtons maison, parmesan râpé, sauce César originale",
+    "prix": 3000,
+    "categorie": "Salade",
+    "image": ""
+  },
+  {
+    "nom": "Poulet Braisé",
+    "description": "Demi-poulet mariné aux épices locales, accompagné de plantains frits et de sauce gombo",
+    "prix": 6000,
+    "categorie": "Volailles",
+    "image": ""
+  },
+  {
+    "nom": "Poisson Grillé",
+    "description": "Capitaine grillé, sauce pili-pili maison, légumes de saison, riz blanc",
+    "prix": 7000,
+    "categorie": "Poissons",
+    "image": ""
+  },
+  {
+    "nom": "Milkshake Chocolat",
+    "description": "Lait entier, glace chocolat belge, chantilly, copeaux de chocolat",
+    "prix": 2500,
+    "categorie": "Milkshakes",
+    "image": ""
+  },
+  {
+    "nom": "Fondant au Chocolat",
+    "description": "Cœur coulant chocolat noir 70%, glace vanille, caramel au beurre salé",
+    "prix": 2800,
+    "categorie": "Dessert",
+    "image": ""
+  },
+  {
+    "nom": "Café Espresso",
+    "description": "Café arabica sélectionné, torréfaction artisanale, servi avec sucre de canne",
+    "prix": 1000,
+    "categorie": "Cafe",
+    "image": ""
+  }
+]

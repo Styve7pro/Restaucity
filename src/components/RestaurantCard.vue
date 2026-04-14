@@ -1,23 +1,28 @@
 <template>
   <div
-    class="bg-white dark:bg-gray-900 rounded-xl shadow-md dark:shadow-gray-900/50 overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/70 transition-all cursor-pointer group border border-gray-200 dark:border-gray-800"
+    class="restaurant-card bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 cursor-pointer flex flex-col"
     @click="viewDetails"
   >
-    <!-- Image -->
-    <div class="relative h-48 overflow-hidden bg-gray-100 dark:bg-gray-800">
+    <!-- ── Zone image ─────────────────────────────────────────── -->
+    <div class="image-wrapper relative bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+
+      <!-- Image affichée en entier, sans crop, sans déformation -->
       <img
         :src="mainPhoto"
         :alt="restaurant.nom"
         loading="lazy"
         decoding="async"
-        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        class="card-img"
         @error="handleImageError"
       />
+
+      <!-- Overlay très léger au hover -->
+      <div class="img-overlay absolute inset-0 bg-black/0 transition-colors duration-300" />
 
       <!-- Badge -->
       <div
         v-if="restaurant.badge"
-        class="absolute top-3 left-3 px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full shadow-md"
+        class="absolute top-3 left-3 px-2.5 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full shadow"
       >
         {{ restaurant.badge }}
       </div>
@@ -26,51 +31,61 @@
       <button
         @click.stop="toggleFavoriteHandler"
         :disabled="favoriteLoading"
-        class="absolute top-3 right-3 w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-50"
+        class="fav-btn absolute top-3 right-3 w-9 h-9 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md disabled:opacity-50"
         :aria-label="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
       >
         <svg
-          class="w-5 h-5 transition-colors"
-          :class="isFavorite ? 'fill-red-500 stroke-red-500' : 'fill-none stroke-gray-600 dark:stroke-gray-400'"
+          class="w-5 h-5 transition-all duration-200"
+          :class="isFavorite
+            ? 'fill-red-500 stroke-red-500 scale-110'
+            : 'fill-none stroke-gray-500 dark:stroke-gray-400'"
           viewBox="0 0 24 24"
+          stroke-width="2"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
         </svg>
       </button>
     </div>
 
-    <!-- Contenu -->
-    <div class="p-4">
-      <div class="flex items-start justify-between mb-2">
-        <div class="flex-1 min-w-0">
-          <h3 class="text-lg font-bold text-[var(--color-text)] mb-1 truncate">{{ restaurant.nom }}</h3>
-          <p class="text-sm text-[var(--color-text-secondary)]">{{ restaurant.type || 'Restaurant' }}</p>
-        </div>
+    <!-- ── Contenu ─────────────────────────────────────────────── -->
+    <div class="flex flex-col flex-1 p-4 gap-2.5">
+
+      <!-- Nom + type -->
+      <div>
+        <h3 class="text-[15px] font-bold text-gray-900 dark:text-gray-100 leading-snug line-clamp-1">
+          {{ restaurant.nom }}
+        </h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          {{ restaurant.type || 'Restaurant' }}
+        </p>
       </div>
 
-      <div class="flex items-center gap-4 mb-3">
+      <!-- Note + prix -->
+      <div class="flex items-center gap-2">
         <div class="flex items-center gap-1">
-          <svg class="w-5 h-5 fill-yellow-400" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 fill-amber-400 flex-shrink-0" viewBox="0 0 24 24">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
-          <span class="font-semibold text-[var(--color-text)]">{{ restaurant.note || 0 }}</span>
-          <span class="text-sm text-[var(--color-text-secondary)]">({{ restaurant.reviewCount || 0 }})</span>
+          <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ restaurant.note || '—' }}</span>
+          <span class="text-xs text-gray-400">({{ restaurant.reviewCount || 0 }})</span>
         </div>
-        <div v-if="restaurant.prix" class="text-sm font-semibold text-[var(--color-primary)]">
+        <span v-if="restaurant.prix" class="text-xs font-semibold text-orange-500 dark:text-orange-400 ml-auto">
           {{ restaurant.prix }}
-        </div>
+        </span>
       </div>
 
-      <div class="flex items-center gap-2 text-sm text-[var(--color-text-secondary)] mb-3">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      <!-- Adresse -->
+      <div class="flex items-start gap-1.5 text-gray-500 dark:text-gray-400">
+        <svg class="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        <span class="line-clamp-1">{{ restaurant.adresse }}</span>
+        <span class="text-xs line-clamp-1">{{ restaurant.adresse }}</span>
       </div>
 
+      <!-- CTA -->
       <button
-        class="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors font-medium"
+        class="cta-btn mt-auto w-full py-2.5 rounded-xl text-sm font-semibold text-white"
         @click.stop="viewDetails"
       >
         Voir les détails
@@ -110,8 +125,8 @@ export default {
     if (this.user) {
       this.isFavorite = await this.checkFavorite(this.restaurant.id)
     } else {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]')
-      this.isFavorite = favorites.includes(this.restaurant.id)
+      const ids = JSON.parse(localStorage.getItem('favorites') || '[]')
+      this.isFavorite = ids.includes(this.restaurant.id)
     }
   },
   methods: {
@@ -132,14 +147,10 @@ export default {
           }
         } else {
           this.isFavorite = !this.isFavorite
-          const favorites = JSON.parse(localStorage.getItem('favorites') || '[]')
-          if (this.isFavorite) {
-            favorites.push(this.restaurant.id)
-          } else {
-            const idx = favorites.indexOf(this.restaurant.id)
-            if (idx > -1) favorites.splice(idx, 1)
-          }
-          localStorage.setItem('favorites', JSON.stringify(favorites))
+          const ids = JSON.parse(localStorage.getItem('favorites') || '[]')
+          if (this.isFavorite) ids.push(this.restaurant.id)
+          else ids.splice(ids.indexOf(this.restaurant.id), 1)
+          localStorage.setItem('favorites', JSON.stringify(ids))
           this.$emit('favorite-changed', { id: this.restaurant.id, isFavorite: this.isFavorite })
         }
       } finally {
@@ -149,3 +160,80 @@ export default {
   },
 }
 </script>
+
+<style scoped>
+/* ── Card ─────────────────────────────────────────────────────── */
+.restaurant-card {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  will-change: transform;
+}
+.restaurant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.11), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Zone image ───────────────────────────────────────────────── */
+.image-wrapper {
+  /* Hauteur fixe → toutes les cards ont la même taille */
+  height: 185px;
+  overflow: hidden;
+}
+
+/*
+ * GESTION DE L'IMAGE :
+ * ─────────────────────────────────────────────────────────────────
+ * On utilise `object-fit: contain` (et non `cover`) pour afficher
+ * l'image EN ENTIER sans aucun crop ni déformation.
+ *
+ * Les "marges" de couleur que laisse `contain` (letterbox) sont
+ * comblées par le fond `.bg-gray-100 / dark:bg-gray-800` du
+ * conteneur `.image-wrapper`, ce qui donne un rendu neutre et pro.
+ *
+ * Alternative possible si le fond de l'image est blanc :
+ * utiliser `background: url(...) center/contain no-repeat` en CSS
+ * avec un pseudo-élément flouté en arrière-plan — mais `contain`
+ * seul est suffisant et bien plus simple ici.
+ * ─────────────────────────────────────────────────────────────────
+ */
+.card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  transition: transform 0.35s ease;
+}
+.restaurant-card:hover .card-img {
+  transform: scale(1.05);
+}
+
+/* Overlay subtil au hover */
+.restaurant-card:hover .img-overlay {
+  background-color: rgba(0, 0, 0, 0.07);
+}
+
+/* ── Bouton favori ────────────────────────────────────────────── */
+.fav-btn {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.fav-btn:hover:not(:disabled) {
+  transform: scale(1.18);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+/* ── CTA ──────────────────────────────────────────────────────── */
+.cta-btn {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.cta-btn:hover {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.38);
+}
+.cta-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+</style>
