@@ -1,38 +1,26 @@
 // src/composables/useAuth.js
-// State global partagé entre tous les composants
 import { ref, computed } from 'vue'
 import { authService } from '../services/authService.js'
 
-// ── State singleton ─────────────────────────────────────────────────────────
-const user       = ref(null)
-const loading    = ref(true)   // true jusqu'à ce que la session soit vérifiée
-const authReady  = ref(false)  // true une fois la vérification initiale terminée
+// ── State global singleton (partagé entre tous les composants) ─────────────
+const user      = ref(null)
+const loading   = ref(true)   // true jusqu'à la 1ère vérification de session
+const authReady = ref(false)  // true une fois la session connue
 
-// ── Initialisation (une seule fois au démarrage) ────────────────────────────
+// Init : vérification session au démarrage de l'app
 authService.getSession()
-  .then((session) => {
-    user.value    = session?.user ?? null
-  })
-  .catch(() => {
-    user.value    = null
-  })
-  .finally(() => {
-    loading.value  = false
-    authReady.value = true
-  })
+  .then(session => { user.value = session?.user ?? null })
+  .catch(() => { user.value = null })
+  .finally(() => { loading.value = false; authReady.value = true })
 
-// Écoute tous les changements de session (login, logout, refresh token…)
+// Écoute en temps réel : LOGIN, LOGOUT, TOKEN_REFRESHED, PASSWORD_RECOVERY…
 authService.onAuthStateChange((event, session) => {
-  user.value     = session?.user ?? null
-  loading.value  = false
+  user.value    = session?.user ?? null
+  loading.value = false
   authReady.value = true
-
-  if (event === 'TOKEN_REFRESHED') {
-    console.log('[Auth] Token rafraîchi automatiquement')
-  }
 })
 
-// ── Computed globaux ────────────────────────────────────────────────────────
+// ── Computed globaux ───────────────────────────────────────────────────────
 const isAdmin         = computed(() => authService.isAdmin(user.value))
 const isAuthenticated = computed(() => !!user.value)
 const displayName     = computed(() => authService.getDisplayName(user.value))
@@ -41,8 +29,10 @@ const avatarUrl       = computed(() =>
   user.value?.user_metadata?.picture ||
   null
 )
+// Profil public : nom + avatar, PAS d'email
+const publicProfile   = computed(() => authService.getPublicProfile(user.value))
 
-// ── Composable exporté ──────────────────────────────────────────────────────
+// ── Composable exporté ─────────────────────────────────────────────────────
 export function useAuth() {
 
   const login = async (email, password) => {
@@ -55,16 +45,14 @@ export function useAuth() {
     }
   }
 
-  const register = async (email, password, displayName) => {
+  const register = async (email, password, name) => {
     try {
-      const data = await authService.register(email, password, displayName)
-      const needsConfirm = !data.session   // Supabase renvoie session=null si confirmation requise
+      const data = await authService.register(email, password, name)
+      const needsConfirm = !data.session
       return {
         success: true,
         requiresEmailConfirmation: needsConfirm,
-        message: needsConfirm
-          ? 'Un email de confirmation vous a été envoyé. Vérifiez votre boîte mail.'
-          : null,
+        message: needsConfirm ? 'Un email de confirmation vous a été envoyé.' : null,
       }
     } catch (err) {
       return { success: false, error: mapAuthError(err.message) }
@@ -81,19 +69,12 @@ export function useAuth() {
     }
   }
 
+  // Apple intentionnellement supprimé
   const loginWithGoogle = async () => {
     try {
       await authService.loginWithGoogle()
       return { success: true }
-    } catch (err) {
-      return { success: false, error: mapAuthError(err.message) }
-    }
-  }
-
-  const loginWithApple = async () => {
-    try {
-      await authService.loginWithApple()
-      return { success: true }
+      // Note : la page sera redirigée par Supabase, ce return n'est jamais atteint en cas de succès
     } catch (err) {
       return { success: false, error: mapAuthError(err.message) }
     }
@@ -104,7 +85,7 @@ export function useAuth() {
       const data = await authService.verifyOTP(email, token)
       user.value = data.user
       return { success: true }
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Code invalide ou expiré.' }
     }
   }
@@ -128,7 +109,7 @@ export function useAuth() {
   }
 
   return {
-    // State
+    // State (réactif)
     user,
     loading,
     authReady,
@@ -136,25 +117,25 @@ export function useAuth() {
     isAuthenticated,
     displayName,
     avatarUrl,
+    publicProfile,   // ← nom + avatar, sans email
     // Actions
     login,
     register,
     logout,
-    loginWithGoogle,
-    loginWithApple,
+    loginWithGoogle, // Apple supprimé
     verifyOTP,
     resendOTP,
     resetPassword,
   }
 }
 
-// ── Mapping erreurs Supabase → messages lisibles ────────────────────────────
-function mapAuthError(message = '') {
-  const m = message.toLowerCase()
+// ── Mapping erreurs Supabase → messages français ──────────────────────────
+function mapAuthError(msg = '') {
+  const m = msg.toLowerCase()
   if (m.includes('invalid login') || m.includes('invalid credential') || m.includes('wrong password'))
     return 'Email ou mot de passe incorrect.'
   if (m.includes('email not confirmed'))
-    return 'Veuillez confirmer votre email avant de vous connecter.'
+    return 'Confirmez votre email avant de vous connecter.'
   if (m.includes('user already registered') || m.includes('already been registered'))
     return 'Un compte existe déjà avec cet email.'
   if (m.includes('password should be at least'))
@@ -165,5 +146,5 @@ function mapAuthError(message = '') {
     return 'Trop de tentatives. Patientez quelques minutes.'
   if (m.includes('network') || m.includes('fetch'))
     return 'Erreur réseau. Vérifiez votre connexion internet.'
-  return message || 'Une erreur est survenue. Veuillez réessayer.'
+  return msg || 'Une erreur est survenue. Veuillez réessayer.'
 }

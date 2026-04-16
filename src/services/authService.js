@@ -1,8 +1,46 @@
 // src/services/authService.js
-// Couche service pure — pas de state Vue, juste les appels Supabase
+// ─────────────────────────────────────────────────────────────────────────────
+//
+//  DIAGNOSTIC COMPLET DU BUG "localhost:3000 en production"
+//  ─────────────────────────────────────────────────────────
+//
+//  CAUSE RACINE (pas dans le code JS — dans Supabase Dashboard) :
+//  La "Site URL" dans Authentication → URL Configuration était
+//  http://localhost:3000. Supabase s'en sert comme URL de FALLBACK.
+//
+//  FLUX OAUTH (ce qui se passe vraiment) :
+//  1. Browser → Google (avec redirect_uri = Supabase endpoint)
+//  2. Google → Supabase endpoint (ooctjacjhnwznlnyqjar.supabase.co/auth/v1/callback)
+//  3. Supabase traite le token, puis redirige vers... SA Site URL
+//     Si Site URL = http://localhost:3000 → page blanche en prod ✗
+//
+//  Le `redirectTo` côté client est un HINT, pas une garantie.
+//  Supabase le respecte UNIQUEMENT si l'URL figure dans
+//  "Additional Redirect URLs". Sinon → fallback sur Site URL.
+//
+//  ✅ SOLUTION COMPLÈTE (2 actions dans Supabase Dashboard) :
+//  ──────────────────────────────────────────────────────────
+//  Authentication → URL Configuration :
+//    Site URL                   = https://restaucity.vercel.app
+//    Additional Redirect URLs   = https://restaucity.vercel.app/auth/callback
+//                                 http://localhost:5173/auth/callback
+//
+//  Google Cloud Console (déjà correct d'après screenshot) :
+//    Authorized JS origins      ✅ https://restaucity.vercel.app
+//    Authorized redirect URIs   ✅ https://ooctjacjhnwznlnyqjar.supabase.co/auth/v1/callback
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { supabase } from '../config/supabaseConfig.js'
 
-const REDIRECT_URL = `${window.location.origin}/auth/callback`
+/**
+ * URL de callback dynamique — jamais hardcodée.
+ * Locale  → http://localhost:5173/auth/callback
+ * Prod    → https://restaucity.vercel.app/auth/callback
+ */
+function getCallbackUrl() {
+  return `${window.location.origin}/auth/callback`
+}
 
 export const authService = {
 
@@ -14,7 +52,8 @@ export const authService = {
   },
 
   onAuthStateChange(callback) {
-    return supabase.auth.onAuthStateChange(callback)
+    const { data } = supabase.auth.onAuthStateChange(callback)
+    return data // retourne { subscription } pour pouvoir se désabonner
   },
 
   // ── Email / Password ─────────────────────────────────────────────────────
@@ -30,7 +69,7 @@ export const authService = {
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo: REDIRECT_URL,
+        emailRedirectTo: getCallbackUrl(),
       },
     })
     if (error) throw error
@@ -42,44 +81,39 @@ export const authService = {
     if (error) throw error
   },
 
-  // ── OAuth ────────────────────────────────────────────────────────────────
+  // ── Google OAuth — Apple intentionnellement supprimé ─────────────────────
   async loginWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: REDIRECT_URL,
-        queryParams: { prompt: 'select_account' },
+        redirectTo: getCallbackUrl(), // doit être dans Additional Redirect URLs
+        queryParams: {
+          prompt: 'select_account', // force le sélecteur de compte
+          access_type: 'offline',   // obtenir un refresh_token
+        },
       },
     })
     if (error) throw error
+    // Pas de return : Supabase redirige le navigateur vers Google
   },
 
-  async loginWithApple() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: { redirectTo: REDIRECT_URL },
+  // ── Mot de passe oublié ───────────────────────────────────────────────────
+  async resetPassword(email) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
     })
     if (error) throw error
   },
 
-  // ── OTP / Email confirm ───────────────────────────────────────────────────
+  // ── OTP ───────────────────────────────────────────────────────────────────
   async verifyOTP(email, token) {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email, token, type: 'email',
-    })
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
     if (error) throw error
     return data
   },
 
   async resendOTP(email) {
     const { error } = await supabase.auth.resend({ type: 'signup', email })
-    if (error) throw error
-  },
-
-  async resetPassword(email) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
     if (error) throw error
   },
 
@@ -93,6 +127,20 @@ export const authService = {
       user.email?.split('@')[0] ||
       'Utilisateur'
     )
+  },
+
+  /**
+   * Profil public : NOM + AVATAR uniquement.
+   * L'email est intentionnellement exclu (confidentialité).
+   */
+  getPublicProfile(user) {
+    if (!user) return null
+    return {
+      name:      authService.getDisplayName(user),
+      avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+      isAdmin:   authService.isAdmin(user),
+      // ⚠️  email volontairement absent
+    }
   },
 
   isAdmin(user) {
