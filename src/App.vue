@@ -1,7 +1,7 @@
 <template>
   <div id="app" class="min-h-screen bg-[var(--color-background)] flex flex-col">
 
-    <!-- ── Loader session (splash screen) ────────────────────────────────── -->
+    <!-- ── Splash loader ─────────────────────────────────────────────────── -->
     <Transition name="loader-fade">
       <div
         v-if="loading && !isAuthRoute"
@@ -20,13 +20,15 @@
       </div>
     </Transition>
 
-    <!-- ── Système de toasts ─────────────────────────────────────────────── -->
+    <!-- ── Toast system ──────────────────────────────────────────────────── -->
     <ToastContainer />
 
-    <!-- ── Notifications restaurants (Realtime) ──────────────────────────── -->
-    <NotificationCenter v-if="isAuthenticated && !isAuthRoute" />
+    <!-- ── Notification toasts flottants (Realtime) ──────────────────────── -->
+    <NotificationToasts v-if="isAuthenticated && !isAuthRoute" />
 
-    <!-- ── Sidebar desktop ───────────────────────────────────────────────── -->
+    <!-- ══════════════════════════════════════════════════════════════════════
+         SIDEBAR DESKTOP
+    ═══════════════════════════════════════════════════════════════════════ -->
     <aside
       v-if="!isMobile && isAuthenticated && !isAuthRoute"
       class="fixed left-0 top-0 h-screen w-64 bg-white dark:bg-gray-900 border-r border-[var(--color-border)] z-40 flex flex-col"
@@ -44,11 +46,11 @@
           </div>
         </router-link>
 
-        <!-- Navigation -->
-        <nav class="space-y-1 flex-1">
+        <!-- Nav principale -->
+        <nav class="space-y-0.5 flex-1">
           <router-link
             v-for="item in navItems" :key="item.to" :to="item.to"
-            class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all font-medium text-sm"
+            class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all font-medium text-sm relative"
             :class="isActive(item.to)
               ? 'bg-orange-50 dark:bg-orange-900/20 text-[var(--color-primary)]'
               : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]'"
@@ -56,11 +58,18 @@
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon"/>
             </svg>
-            {{ item.label }}
+            <span>{{ item.label }}</span>
+            <!-- Badge non lus (notifications uniquement) -->
+            <span
+              v-if="item.badge && unreadCount > 0"
+              class="ml-auto text-xs font-bold bg-[var(--color-primary)] text-white rounded-full min-w-[1.1rem] h-[1.1rem] flex items-center justify-center px-1"
+            >
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
           </router-link>
         </nav>
 
-        <!-- Thème toggle -->
+        <!-- Thème (desktop uniquement) -->
         <button @click="toggleTheme"
           class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-[var(--color-surface)] transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm font-medium mb-1"
         >
@@ -71,23 +80,21 @@
           {{ isDark ? 'Mode clair' : 'Mode sombre' }}
         </button>
 
-        <!-- Profil utilisateur — NOM + AVATAR uniquement, PAS d'email -->
+        <!-- Profil + déconnexion (desktop) -->
         <div class="border-t border-[var(--color-border)] pt-4 flex-shrink-0">
           <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1">
             <div class="w-9 h-9 rounded-full bg-[var(--color-primary)] flex items-center justify-center flex-shrink-0 overflow-hidden ring-2 ring-orange-200 dark:ring-orange-800">
               <img v-if="avatarUrl" :src="avatarUrl" :alt="displayName" class="w-full h-full object-cover" />
-              <span v-else class="text-white text-sm font-bold select-none">
-                {{ displayName.charAt(0).toUpperCase() }}
-              </span>
+              <span v-else class="text-white text-sm font-bold select-none">{{ displayName.charAt(0).toUpperCase() }}</span>
             </div>
             <div class="flex-1 min-w-0">
-              <!-- Nom affiché, email intentionnellement masqué -->
               <p class="text-sm font-semibold text-[var(--color-text)] truncate">{{ displayName }}</p>
-              <p v-if="isAdmin" class="text-xs text-[var(--color-primary)] font-medium">Administrateur</p>
-              <p v-else class="text-xs text-[var(--color-text-secondary)]">Membre</p>
+              <p class="text-xs" :class="isAdmin ? 'text-[var(--color-primary)] font-medium' : 'text-[var(--color-text-secondary)]'">
+                {{ isAdmin ? 'Administrateur' : 'Membre' }}
+              </p>
             </div>
           </div>
-
+          <!-- Déconnexion desktop -->
           <button @click="handleLogout"
             class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors text-sm font-medium"
           >
@@ -100,56 +107,49 @@
       </div>
     </aside>
 
-    <!-- ── Contenu principal ──────────────────────────────────────────────── -->
+    <!-- ── Main ──────────────────────────────────────────────────────────── -->
     <main
       :class="{
         'lg:ml-64': !isMobile && isAuthenticated && !isAuthRoute,
-        'pb-20':    isMobile && isAuthenticated && !isAuthRoute,
+        'pb-20':    isMobile  && isAuthenticated && !isAuthRoute,
       }"
       class="flex-1 min-w-0"
     >
       <router-view />
     </main>
 
-    <!-- ── Bottom nav mobile ─────────────────────────────────────────────── -->
+    <!-- ══════════════════════════════════════════════════════════════════════
+         BOTTOM NAV MOBILE
+         → Sans thème, sans déconnexion, avec Notifications + badge
+    ═══════════════════════════════════════════════════════════════════════ -->
     <nav
       v-if="isMobile && isAuthenticated && !isAuthRoute"
       class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-[var(--color-border)] z-50"
       style="padding-bottom: env(safe-area-inset-bottom, 0px)"
     >
-      <div class="flex items-center justify-around py-1">
+      <div class="flex items-stretch">
         <router-link
           v-for="item in navItems" :key="item.to" :to="item.to"
-          class="flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg transition-colors min-w-0"
-          :class="isActive(item.to) ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)]'"
+          class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative"
+          :class="isActive(item.to)
+            ? 'text-[var(--color-primary)]'
+            : 'text-[var(--color-text-secondary)]'"
         >
-          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon"/>
-          </svg>
-          <span class="text-xs font-medium truncate">{{ item.label }}</span>
-        </router-link>
-
-        <!-- Thème (mobile) -->
-        <button @click="toggleTheme"
-          class="flex flex-col items-center gap-0.5 px-4 py-2 text-[var(--color-text-secondary)]"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path v-if="isDark" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-          </svg>
-          <span class="text-xs font-medium">Thème</span>
-        </button>
-
-        <!-- Avatar logout (mobile) -->
-        <button @click="handleLogout"
-          class="flex flex-col items-center gap-0.5 px-4 py-2 text-[var(--color-text-secondary)] hover:text-red-500 transition-colors"
-        >
-          <div class="w-5 h-5 rounded-full bg-[var(--color-primary)] flex items-center justify-center overflow-hidden">
-            <img v-if="avatarUrl" :src="avatarUrl" :alt="displayName" class="w-full h-full object-cover" />
-            <span v-else class="text-white text-xs font-bold">{{ displayName.charAt(0).toUpperCase() }}</span>
+          <!-- Icône + badge -->
+          <div class="relative">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon"/>
+            </svg>
+            <!-- Badge notifications -->
+            <span
+              v-if="item.badge && unreadCount > 0"
+              class="absolute -top-1.5 -right-2 text-[.6rem] font-black bg-[var(--color-primary)] text-white rounded-full min-w-[1rem] h-4 flex items-center justify-center px-0.5 leading-none shadow"
+            >
+              {{ unreadCount > 9 ? '9+' : unreadCount }}
+            </span>
           </div>
-          <span class="text-xs font-medium">Sortir</span>
-        </button>
+          <span class="text-[.68rem] font-medium leading-none mt-0.5">{{ item.label }}</span>
+        </router-link>
       </div>
     </nav>
 
@@ -166,11 +166,11 @@ import { useToast } from './composables/useToast.js'
 import { useNotifications } from './composables/useNotifications.js'
 import Footer from './components/Footer.vue'
 import ToastContainer from './components/ui/ToastContainer.vue'
-import NotificationCenter from './components/NotificationCenter.vue'
+import NotificationToasts from './components/NotificationToasts.vue'
 
 export default {
   name: 'App',
-  components: { Footer, ToastContainer, NotificationCenter },
+  components: { Footer, ToastContainer, NotificationToasts },
 
   setup() {
     const { user, loading, isAuthenticated, isAdmin, displayName, avatarUrl, logout } = useAuth()
@@ -178,16 +178,14 @@ export default {
     const toast = useToast()
     const route = useRoute()
     const router = useRouter()
-    const { subscribe, unsubscribe } = useNotifications()
-
+    const { subscribe, unsubscribe, unreadCount } = useNotifications()
     const isAuthRoute = computed(() => route.path.startsWith('/auth'))
 
     return {
       user, loading, isAuthenticated, isAdmin, displayName, avatarUrl, logout,
       isDark, toggleTheme,
-      toast, route, router,
-      isAuthRoute,
-      subscribe, unsubscribe,
+      toast, route, router, isAuthRoute,
+      subscribe, unsubscribe, unreadCount,
     }
   },
 
@@ -206,6 +204,10 @@ export default {
           to: '/favorites', label: 'Favoris',
           icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
         },
+        {
+          to: '/notifications', label: 'Notifs', badge: true,
+          icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
+        },
       ]
       if (this.isAdmin) {
         items.push({
@@ -220,7 +222,6 @@ export default {
   mounted() {
     this.checkMobile()
     window.addEventListener('resize', this.checkMobile)
-    // Démarrer le listener Realtime dès que l'utilisateur est authentifié
     if (this.isAuthenticated) this.subscribe()
   },
 
@@ -230,7 +231,6 @@ export default {
   },
 
   watch: {
-    // S'abonner aux notifs dès la connexion, se désabonner à la déconnexion
     isAuthenticated(val) {
       if (val) this.subscribe()
       else this.unsubscribe()
