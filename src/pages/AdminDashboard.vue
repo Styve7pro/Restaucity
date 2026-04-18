@@ -36,29 +36,103 @@
           </div>
         </div>
 
-        <!-- Slider -->
+        <!-- ── Slider accueil ─────────────────────────────────────────── -->
         <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-          <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+
+          <!-- Header -->
+          <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 flex flex-wrap gap-3 items-center justify-between">
             <div>
               <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Slider accueil</h2>
               <p class="text-sm text-gray-500 mt-0.5">{{ sliderImages.length }} image(s)</p>
             </div>
-            <button @click="showAddSliderModal = true" class="btn-primary text-sm flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Ajouter
-            </button>
+            <div class="flex items-center gap-2">
+              <!-- Upload multiple direct (sans modal) -->
+              <input
+                ref="sliderMultiInput"
+                type="file"
+                accept="image/*"
+                multiple
+                class="hidden"
+                @change="handleSliderMultiUpload"
+              />
+              <button
+                @click="$refs.sliderMultiInput.click()"
+                :disabled="sliderUploading"
+                class="btn-secondary text-sm flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                {{ sliderUploading ? `${sliderUploadProgress}%…` : 'Importer' }}
+              </button>
+              <button @click="showAddSliderModal = true" class="btn-primary text-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span class="hidden sm:inline">Ajouter</span>
+                <span class="sm:hidden">+</span>
+              </button>
+            </div>
           </div>
-          <div class="p-6">
-            <div v-if="sliderLoading" class="flex justify-center py-6"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div></div>
-            <p v-else-if="sliderImages.length === 0" class="text-center text-gray-500 py-6 text-sm">Aucune image dans le slider</p>
-            <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-              <div v-for="img in sliderImages" :key="img.id" class="relative group rounded-xl overflow-hidden aspect-video bg-gray-100 dark:bg-gray-800">
-                <img :src="img.url" alt="Slider" loading="lazy" class="w-full h-full object-cover" />
-                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                  <button @click="confirmDeleteSlider(img)" class="opacity-0 group-hover:opacity-100 p-2 bg-red-600 text-white rounded-lg transition-opacity">
+
+          <!-- Preview slider live -->
+          <div class="px-4 sm:px-6 pt-4" v-if="sliderImages.length > 0">
+            <ImageSlider
+              :images="sliderImages.map(i => i.url)"
+              :loading="sliderLoading"
+              size="sm"
+              :auto-play="false"
+              :allow-zoom="false"
+              empty-text="Aucune image dans le slider"
+            />
+          </div>
+
+          <!-- Grille d'images gérables -->
+          <div class="p-4 sm:p-6">
+            <!-- Skeleton -->
+            <div v-if="sliderLoading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div v-for="i in 4" :key="i" class="aspect-video rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse"></div>
+            </div>
+
+            <!-- Barre de progression upload -->
+            <div v-else-if="sliderUploading" class="py-6 text-center space-y-3">
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                <div class="h-2 bg-[var(--color-primary)] rounded-full transition-all duration-300" :style="`width:${sliderUploadProgress}%`"></div>
+              </div>
+              <p class="text-sm text-gray-500">Upload en cours… {{ sliderUploadProgress }}%</p>
+            </div>
+
+            <!-- Empty -->
+            <div v-else-if="sliderImages.length === 0" class="py-12 flex flex-col items-center gap-3 text-center">
+              <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+              <p class="text-sm text-gray-500">Aucune image. Ajoutez-en une ci-dessus.</p>
+            </div>
+
+            <!-- Grille responsive -->
+            <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              <div
+                v-for="img in sliderImages" :key="img.id"
+                class="relative group rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800"
+                style="aspect-ratio: 16/9"
+              >
+                <img
+                  :src="img.url"
+                  alt="Slider"
+                  loading="lazy"
+                  class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <!-- Overlay actions -->
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                  <button
+                    @click="confirmDeleteSlider(img)"
+                    class="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-lg"
+                    title="Supprimer"
+                  >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                   </button>
                 </div>
+                <!-- Numéro d'ordre -->
+                <span class="absolute top-1.5 left-1.5 text-[.65rem] font-bold bg-black/60 text-white rounded px-1.5 py-0.5">
+                  {{ img.order + 1 }}
+                </span>
               </div>
             </div>
           </div>
@@ -219,16 +293,105 @@
                 </div>
               </div>
             </div>
-            <div>
-              <label class="form-label">Images</label>
-              <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="handleImageSelect" />
-              <button type="button" @click="$refs.fileInput.click()" class="btn-secondary text-sm">📁 Choisir des images</button>
-              <span v-if="selectedImages.length" class="ml-2 text-sm text-gray-500">{{ selectedImages.length }} sélectionnée(s)</span>
-              <div v-if="imagePreviews.length" class="grid grid-cols-4 gap-2 mt-2">
-                <div v-for="(p, i) in imagePreviews" :key="i" class="relative group">
-                  <img :src="p" class="w-full h-20 object-cover rounded-lg" />
-                  <button type="button" @click="removeImage(i)" class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 flex items-center justify-center">✕</button>
+            <!-- ── Galerie photos du restaurant ──────────────────────── -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="form-label mb-0">Photos du restaurant</label>
+                <div class="flex items-center gap-2">
+                  <!-- Bouton supprimer toutes (seulement en édition) -->
+                  <button
+                    v-if="editingRestaurant && formData.photos.length > 0"
+                    type="button"
+                    @click="confirmDeleteAllPhotos"
+                    class="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Supprimer toutes
+                  </button>
+                  <!-- Input fichier -->
+                  <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="handleImageSelect" />
+                  <button type="button" @click="$refs.fileInput.click()" class="btn-secondary text-xs flex items-center gap-1.5 py-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    Ajouter
+                  </button>
                 </div>
+              </div>
+
+              <!-- Photos existantes (en édition) -->
+              <div v-if="formData.photos.length > 0">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  Photos actuelles — <span class="text-[var(--color-primary)] font-semibold">cliquez sur ⭐ pour choisir la photo principale</span>
+                </p>
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div
+                    v-for="(url, i) in formData.photos"
+                    :key="url"
+                    class="relative group rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer"
+                    style="aspect-ratio:16/9"
+                    @click="setCoverPhoto(url)"
+                  >
+                    <img :src="url" :alt="`Photo ${i+1}`" loading="lazy" class="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
+
+                    <!-- Overlay actions -->
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
+                      <!-- Bouton image principale -->
+                      <button
+                        type="button"
+                        @click.stop="setCoverPhoto(url)"
+                        class="p-1.5 rounded-lg text-white transition-colors shadow"
+                        :class="formData.cover_photo === url ? 'bg-amber-500' : 'bg-black/50 hover:bg-amber-500'"
+                        :title="formData.cover_photo === url ? 'Image principale' : 'Définir comme principale'"
+                      >
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      </button>
+                      <!-- Bouton supprimer cette photo -->
+                      <button
+                        type="button"
+                        @click.stop="removeExistingPhoto(i)"
+                        class="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow"
+                        title="Supprimer cette photo"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+
+                    <!-- Badge "Principale" -->
+                    <div
+                      v-if="formData.cover_photo === url || (i === 0 && !formData.cover_photo)"
+                      class="absolute top-1.5 left-1.5 flex items-center gap-1 bg-amber-500 text-white text-[.62rem] font-bold px-1.5 py-0.5 rounded-md shadow"
+                    >
+                      <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      Principale
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nouvelles images sélectionnées (previews) -->
+              <div v-if="imagePreviews.length > 0">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Nouvelles images à ajouter ({{ imagePreviews.length }})</p>
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div v-for="(p, i) in imagePreviews" :key="i"
+                    class="relative group rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800"
+                    style="aspect-ratio:16/9"
+                  >
+                    <img :src="p" class="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      @click="removeNewImage(i)"
+                      class="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                    >✕</button>
+                    <div class="absolute bottom-1 left-1 bg-black/60 text-white text-[.6rem] px-1 rounded">Nouvelle</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Empty state -->
+              <div v-if="formData.photos.length === 0 && imagePreviews.length === 0"
+                class="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center"
+              >
+                <svg class="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <p class="text-sm text-gray-400 dark:text-gray-500">Aucune photo — cliquez sur "Ajouter" ci-dessus</p>
               </div>
             </div>
             <div v-if="formError" class="error-box">{{ formError }}</div>
@@ -239,6 +402,39 @@
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- ── Supprimer TOUTES les photos (hors menu) ──────────────────── -->
+      <div v-if="showDeleteAllPhotosModal" class="modal-backdrop">
+        <div class="modal-box max-w-md">
+          <div class="p-6">
+            <div class="flex items-start gap-4 mb-4">
+              <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Supprimer toutes les photos ?</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Les <strong>{{ formData.photos.length }} photo(s)</strong> de
+                  <strong>{{ editingRestaurant?.nom }}</strong> seront définitivement supprimées du stockage.
+                  <br/><span class="text-green-600 dark:text-green-400 font-medium mt-1 block">✓ Les photos du menu ne seront pas touchées.</span>
+                </p>
+              </div>
+            </div>
+            <div class="flex justify-end gap-3">
+              <button @click="showDeleteAllPhotosModal = false" class="btn-ghost" :disabled="deletingAllPhotos">Annuler</button>
+              <button @click="handleDeleteAllPhotos" :disabled="deletingAllPhotos" class="btn-danger flex items-center gap-2">
+                <svg v-if="deletingAllPhotos" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                {{ deletingAllPhotos ? 'Suppression…' : 'Supprimer toutes' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -481,7 +677,7 @@ export default {
 
   setup() {
     const { user, loading: authLoading, isAdmin, logout } = useAuth()
-    const { restaurants, loading, fetchRestaurants, addRestaurant, updateRestaurant, deleteRestaurant, menuLoading, fetchMenu, addMenuItem, updateMenuItem, deleteMenuItem } = useRestaurants()
+    const { restaurants, loading, fetchRestaurants, addRestaurant, updateRestaurant, deleteRestaurant, deleteAllRestaurantPhotos, menuLoading, fetchMenu, addMenuItem, updateMenuItem, deleteMenuItem } = useRestaurants()
     const { getGlobalStats } = useStatistics()
     const { uploadMultipleImages } = useSupabaseStorage()
     const toast = useToast()
@@ -490,7 +686,7 @@ export default {
       if (isAdmin.value) await fetchRestaurants()
     })
 
-    return { user, authLoading, isAdmin, logout, restaurants, loading, fetchRestaurants, addRestaurant, updateRestaurant, deleteRestaurant, menuLoading, fetchMenu, addMenuItem, updateMenuItem, deleteMenuItem, getGlobalStats, uploadMultipleImages, toast }
+    return { user, authLoading, isAdmin, logout, restaurants, loading, fetchRestaurants, addRestaurant, updateRestaurant, deleteRestaurant, deleteAllRestaurantPhotos, menuLoading, fetchMenu, addMenuItem, updateMenuItem, deleteMenuItem, getGlobalStats, uploadMultipleImages, toast }
   },
 
   data() {
@@ -503,8 +699,9 @@ export default {
 
       // Restaurant form
       showModal: false, editingRestaurant: null, submitting: false, formError: '',
-      formData: { nom:'', type:'', adresse:'', description:'', numero:'', prix:'', note:0, horaire: DEFAULT_HORAIRE(), photos:[] },
+      formData: { nom:'', type:'', adresse:'', description:'', numero:'', prix:'', note:0, horaire: DEFAULT_HORAIRE(), photos:[], cover_photo: null },
       selectedImages: [], imagePreviews: [],
+      showDeleteAllPhotosModal: false, deletingAllPhotos: false,
       showDeleteModal: false, restaurantToDelete: null,
 
       // Import JSON restaurants
@@ -524,6 +721,7 @@ export default {
 
       // Slider
       sliderImages: [], sliderLoading: false,
+      sliderUploading: false, sliderUploadProgress: 0,
       showAddSliderModal: false, selectedSliderImage: null, sliderImagePreview: null, sliderFormError: '',
       showDeleteSliderModal: false, sliderImageToDelete: null,
     }
@@ -649,23 +847,72 @@ export default {
     // ── Restaurant CRUD ──────────────────────────────────────────
     openAddModal() {
       this.editingRestaurant = null
-      this.formData = { nom:'', type:'', adresse:'', description:'', numero:'', prix:'', note:0, horaire: DEFAULT_HORAIRE(), photos:[] }
+      this.formData = { nom:'', type:'', adresse:'', description:'', numero:'', prix:'', note:0, horaire: DEFAULT_HORAIRE(), photos:[], cover_photo: null }
       this.selectedImages = []; this.imagePreviews = []; this.formError = ''
       this.showModal = true
     },
     openEditModal(r) {
       this.editingRestaurant = r
-      this.formData = { nom:r.nom, type:r.type||'', adresse:r.adresse, description:r.description, numero:r.numero||'', prix:r.prix||'', note:r.note||0, horaire:{...DEFAULT_HORAIRE(),...(r.horaire||{})}, photos:r.photos||[] }
+      this.formData = { nom:r.nom, type:r.type||'', adresse:r.adresse, description:r.description, numero:r.numero||'', prix:r.prix||'', note:r.note||0, horaire:{...DEFAULT_HORAIRE(),...(r.horaire||{})}, photos:[...(r.photos||[])], cover_photo: r.cover_photo || (r.photos?.[0] || null) }
       this.selectedImages = []; this.imagePreviews = []; this.formError = ''
       this.showModal = true
     },
-    closeModal() { this.showModal = false; this.editingRestaurant = null; this.selectedImages = []; this.imagePreviews = []; this.formError = '' },
+    closeModal() { this.showModal = false; this.editingRestaurant = null; this.selectedImages = []; this.imagePreviews = []; this.formError = ''; this.showDeleteAllPhotosModal = false },
     handleImageSelect(e) {
-      this.selectedImages = Array.from(e.target.files)
-      this.imagePreviews = []
-      this.selectedImages.forEach((f) => { const r = new FileReader(); r.onload = (ev) => this.imagePreviews.push(ev.target.result); r.readAsDataURL(f) })
+      const newFiles = Array.from(e.target.files)
+      this.selectedImages = [...this.selectedImages, ...newFiles]
+      newFiles.forEach(f => {
+        const r = new FileReader()
+        r.onload = ev => this.imagePreviews.push(ev.target.result)
+        r.readAsDataURL(f)
+      })
+      e.target.value = '' // reset pour permettre re-sélection
     },
-    removeImage(i) { this.selectedImages.splice(i,1); this.imagePreviews.splice(i,1) },
+    // Retire une nouvelle image (pas encore uploadée)
+    removeNewImage(i) {
+      this.selectedImages.splice(i, 1)
+      this.imagePreviews.splice(i, 1)
+    },
+    // Retire une photo existante (déjà en DB)
+    removeExistingPhoto(i) {
+      const url = this.formData.photos[i]
+      this.formData.photos.splice(i, 1)
+      // Si c'était la principale, réaffecter à la première restante
+      if (this.formData.cover_photo === url) {
+        this.formData.cover_photo = this.formData.photos[0] || null
+      }
+    },
+    // Définit l'image principale
+    setCoverPhoto(url) {
+      this.formData.cover_photo = url
+    },
+    // Confirmation suppression de toutes les photos
+    confirmDeleteAllPhotos() {
+      this.showDeleteAllPhotosModal = true
+    },
+    // Supprime toutes les photos (hors menu) du restaurant en cours d'édition
+    async handleDeleteAllPhotos() {
+      if (!this.editingRestaurant) return
+      this.deletingAllPhotos = true
+      try {
+        const result = await this.deleteAllRestaurantPhotos(
+          this.editingRestaurant.id,
+          this.editingRestaurant.nom
+        )
+        if (result.success) {
+          this.formData.photos = []
+          this.formData.cover_photo = null
+          this.showDeleteAllPhotosModal = false
+          this.toast.success(`${result.deletedCount || 'Toutes les'} photo(s) supprimée(s) !`)
+        } else {
+          this.toast.error('Erreur: ' + result.error)
+        }
+      } catch (e) {
+        this.toast.error('Erreur: ' + e.message)
+      } finally {
+        this.deletingAllPhotos = false
+      }
+    },
     async handleSubmit() {
       if (!this.formData.nom||!this.formData.type||!this.formData.adresse) { this.formError = 'Remplissez les champs obligatoires'; return }
       this.submitting = true; this.formError = ''
@@ -741,34 +988,94 @@ export default {
       finally { this.submitting = false }
     },
 
-    // ── Slider ────────────────────────────────────────────────────
+    // ── Slider ─────────────────────────────────────────────────────────────
     async fetchSliderImages() {
       this.sliderLoading = true
-      const { data } = await supabase.from('slider_images').select('*').order('order', { ascending: true })
-      this.sliderImages = data || []
-      this.sliderLoading = false
+      try {
+        const { data, error } = await supabase
+          .from('slider_images')
+          .select('*')
+          .order('order', { ascending: true })
+        if (error) throw error
+        this.sliderImages = data || []
+      } catch (e) {
+        this.toast.error('Erreur chargement slider: ' + e.message)
+      } finally {
+        this.sliderLoading = false
+      }
     },
+
+    // Upload multiple direct (bouton "Importer")
+    async handleSliderMultiUpload(e) {
+      const files = Array.from(e.target.files)
+      if (!files.length) return
+      this.sliderUploading = true
+      this.sliderUploadProgress = 0
+      try {
+        const total = files.length
+        let done    = 0
+        const inserts = []
+        for (const file of files) {
+          const result = await this.uploadMultipleImages([file], 'slider')
+          const url    = result.urls?.[0]
+          if (url) {
+            inserts.push({ url, order: this.sliderImages.length + inserts.length, created_at: new Date().toISOString() })
+          }
+          done++
+          this.sliderUploadProgress = Math.round((done / total) * 100)
+        }
+        if (inserts.length) {
+          await supabase.from('slider_images').insert(inserts)
+          await this.fetchSliderImages()
+          this.toast.success(`${inserts.length} image(s) ajoutée(s) au slider !`)
+        }
+      } catch (e) {
+        this.toast.error('Erreur upload: ' + e.message)
+      } finally {
+        this.sliderUploading = false
+        this.sliderUploadProgress = 0
+        e.target.value = ''  // reset input file
+      }
+    },
+
+    // Upload via modal (1 image avec preview)
     handleSliderImageSelect(e) {
       this.selectedSliderImage = e.target.files[0]
       if (this.selectedSliderImage) {
-        const r = new FileReader(); r.onload = (ev) => { this.sliderImagePreview = ev.target.result }; r.readAsDataURL(this.selectedSliderImage)
+        const r = new FileReader()
+        r.onload = (ev) => { this.sliderImagePreview = ev.target.result }
+        r.readAsDataURL(this.selectedSliderImage)
       }
     },
     async handleAddSliderImage() {
       if (!this.selectedSliderImage) return
-      this.submitting = true; this.sliderFormError = ''
+      this.submitting = true
+      this.sliderFormError = ''
       try {
         const result = await this.uploadMultipleImages([this.selectedSliderImage], 'slider')
-        const url = result.urls?.[0]
+        const url    = result.urls?.[0]
         if (!url) throw new Error('Upload échoué')
-        await supabase.from('slider_images').insert([{ url, order: this.sliderImages.length, created_at: new Date().toISOString() }])
+        await supabase.from('slider_images').insert([{
+          url,
+          order: this.sliderImages.length,
+          created_at: new Date().toISOString(),
+        }])
         await this.fetchSliderImages()
-        this.showAddSliderModal = false; this.selectedSliderImage = null; this.sliderImagePreview = null
+        this.showAddSliderModal    = false
+        this.selectedSliderImage   = null
+        this.sliderImagePreview    = null
         this.toast.success('Image ajoutée au slider !')
-      } catch (e) { this.sliderFormError = e.message }
-      finally { this.submitting = false }
+      } catch (e) {
+        this.sliderFormError = e.message
+      } finally {
+        this.submitting = false
+      }
     },
-    confirmDeleteSlider(img) { this.sliderImageToDelete = img; this.showDeleteSliderModal = true },
+
+    confirmDeleteSlider(img) {
+      this.sliderImageToDelete    = img
+      this.showDeleteSliderModal  = true
+    },
     async deleteSliderImage() {
       this.submitting = true
       try {
@@ -776,8 +1083,11 @@ export default {
         await this.fetchSliderImages()
         this.showDeleteSliderModal = false
         this.toast.success('Image supprimée')
-      } catch (e) { this.toast.error('Erreur: ' + e.message) }
-      finally { this.submitting = false }
+      } catch (e) {
+        this.toast.error('Erreur: ' + e.message)
+      } finally {
+        this.submitting = false
+      }
     },
   },
 }

@@ -151,28 +151,41 @@ export function useRestaurants() {
   }
 
   // ── Update restaurant ───────────────────────────────────────────────────
+  // restaurantData.photos[]     = URLs existantes conservées
+  // restaurantData.cover_photo  = URL image principale
+  // imageFiles[]                = nouveaux fichiers à uploader
   const updateRestaurant = async (id, restaurantData, imageFiles = []) => {
     loading.value = true
-    error.value = null
+    error.value   = null
 
     try {
-      let photoUrls = restaurantData.photos || []
+      let photoUrls = [...(restaurantData.photos || [])]
 
+      // Upload des nouvelles images
       if (imageFiles?.length > 0) {
         const result = await uploadRestaurantImages(imageFiles, restaurantData.nom)
         photoUrls = [...photoUrls, ...(result.urls || [])]
       }
 
+      // Image principale toujours en 1ère position
+      let cover = restaurantData.cover_photo || null
+      if (cover && photoUrls.includes(cover)) {
+        photoUrls = [cover, ...photoUrls.filter(u => u !== cover)]
+      } else if (!cover && photoUrls.length > 0) {
+        cover = photoUrls[0]
+      }
+
       const payload = {
-        nom: restaurantData.nom,
-        type: restaurantData.type || '',
-        adresse: restaurantData.adresse || '',
-        description: restaurantData.description || '',
-        numero: restaurantData.numero || '',
-        prix: restaurantData.prix || '',
-        note: restaurantData.note || 0,
-        photos: photoUrls,
-        horaire: restaurantData.horaire || {},
+        nom:         restaurantData.nom,
+        type:        restaurantData.type        || '',
+        adresse:     restaurantData.adresse      || '',
+        description: restaurantData.description  || '',
+        numero:      restaurantData.numero       || '',
+        prix:        restaurantData.prix         || '',
+        note:        restaurantData.note         || 0,
+        photos:      photoUrls,
+        cover_photo: cover,
+        horaire:     restaurantData.horaire      || {},
       }
 
       const { error: updateError } = await supabase
@@ -182,9 +195,8 @@ export function useRestaurants() {
 
       if (updateError) throw updateError
 
-      // Mise à jour optimiste dans le state local
-      const idx = restaurants.value.findIndex((r) => r.id === id)
-      if (idx !== -1) restaurants.value[idx] = { ...restaurants.value[idx], ...payload }
+      const idx = restaurants.value.findIndex(r => r.id === id || r.restaurant_id === id)
+      if (idx !== -1) restaurants.value[idx] = { ...restaurants.value[idx], ...payload, id }
 
       clearCache()
       return { success: true }
@@ -194,6 +206,37 @@ export function useRestaurants() {
       return { success: false, error: err.message }
     } finally {
       loading.value = false
+    }
+  }
+
+  // ── Supprimer TOUTES les photos d'un restaurant (hors menu) ─────────────
+  const deleteAllRestaurantPhotos = async (id, restaurantName) => {
+    const sanitize = n => n.trim().replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_-]/g,'').toLowerCase()
+    const { listStorageImages, deleteImage } = useSupabaseStorage()
+    try {
+      const folder = `restaurants/${sanitize(restaurantName)}`
+      const allFiles = await listStorageImages(folder)
+      // Exclure tout ce qui est dans /menu/
+      const rootFiles = allFiles.filter(url => {
+        const after = url.split(`/storage/v1/object/public/restaurants/`)[1] || ''
+        return !after.includes('/menu/')
+      })
+      // Supprimer les fichiers storage
+      await Promise.allSettled(rootFiles.map(url => deleteImage(url)))
+      // Vider en DB
+      const { error: dbErr } = await supabase
+        .from('restaurants')
+        .update({ photos: [], cover_photo: null })
+        .eq('restaurant_id', id)
+      if (dbErr) throw dbErr
+      // Mise à jour locale
+      const idx = restaurants.value.findIndex(r => r.id === id || r.restaurant_id === id)
+      if (idx !== -1) restaurants.value[idx] = { ...restaurants.value[idx], photos: [], cover_photo: null }
+      clearCache()
+      return { success: true, deletedCount: rootFiles.length }
+    } catch (err) {
+      console.error('[Restaurants] deleteAllRestaurantPhotos error:', err)
+      return { success: false, error: err.message }
     }
   }
 
@@ -208,7 +251,6 @@ export function useRestaurants() {
 
       if (deleteError) throw deleteError
 
-      // Suppression optimiste
       restaurants.value = restaurants.value.filter(
         (r) => r.id !== id && r.restaurant_id !== id
       )
@@ -464,6 +506,7 @@ export function useRestaurants() {
     addRestaurant,
     updateRestaurant,
     deleteRestaurant,
+    deleteAllRestaurantPhotos,
     fetchMenu,
     fetchMenuItems: fetchMenu,
     addMenuItem,
