@@ -253,8 +253,28 @@
                 <label class="form-label">Type *</label>
                 <select v-model="formData.type" required class="form-input">
                   <option value="">Sélectionner</option>
-                  <option v-for="t in cuisineTypes" :key="t" :value="t">{{ t }}</option>
+                  <option v-for="t in restaurantCategories" :key="t" :value="t">{{ t }}</option>
                 </select>
+                <!-- Ajouter une catégorie restaurant à la volée -->
+                <div class="flex gap-2 mt-2">
+                  <input
+                    v-model="newRestaurantCat"
+                    type="text"
+                    placeholder="Nouvelle catégorie…"
+                    class="flex-1 px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-200 transition-all"
+                    @keydown.enter.prevent="handleAddRestaurantCat"
+                  />
+                  <button
+                    type="button"
+                    @click="handleAddRestaurantCat"
+                    :disabled="addingRestaurantCat || !newRestaurantCat.trim()"
+                    class="px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-400 text-xs font-semibold rounded-lg border border-orange-200 dark:border-orange-800 transition-colors disabled:opacity-40"
+                  >
+                    <svg v-if="addingRestaurantCat" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                    <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                  </button>
+                </div>
+                <p v-if="newRestaurantCatError" class="text-xs text-red-500 mt-1">{{ newRestaurantCatError }}</p>
               </div>
             </div>
             <div>
@@ -570,8 +590,28 @@
                 <label class="form-label">Catégorie *</label>
                 <select v-model="menuItemFormData.categorie" required class="form-input">
                   <option value="">Sélectionner</option>
-                  <option v-for="c in menuCategoryList" :key="c" :value="c">{{ c }}</option>
+                  <option v-for="c in menuCategories" :key="c" :value="c">{{ c }}</option>
                 </select>
+                <!-- Ajouter une catégorie menu à la volée -->
+                <div class="flex gap-2 mt-2">
+                  <input
+                    v-model="newMenuCat"
+                    type="text"
+                    placeholder="Nouvelle catégorie…"
+                    class="flex-1 px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-200 transition-all"
+                    @keydown.enter.prevent="handleAddMenuCat"
+                  />
+                  <button
+                    type="button"
+                    @click="handleAddMenuCat"
+                    :disabled="addingMenuCat || !newMenuCat.trim()"
+                    class="px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-400 text-xs font-semibold rounded-lg border border-orange-200 dark:border-orange-800 transition-colors disabled:opacity-40"
+                  >
+                    <svg v-if="addingMenuCat" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                    <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                  </button>
+                </div>
+                <p v-if="newMenuCatError" class="text-xs text-red-500 mt-1">{{ newMenuCatError }}</p>
               </div>
               <div>
                 <label class="form-label">Prix (FCFA) *</label>
@@ -622,15 +662,72 @@
             <h3 class="modal-title">Ajouter une image slider</h3>
             <button @click="showAddSliderModal = false" class="modal-close-btn">✕</button>
           </div>
-          <form @submit.prevent="handleAddSliderImage" class="p-6 space-y-4">
-            <input ref="sliderFileInput" type="file" accept="image/*" class="hidden" @change="handleSliderImageSelect" />
-            <button type="button" @click="$refs.sliderFileInput.click()" class="btn-secondary text-sm">Choisir une image</button>
-            <img v-if="sliderImagePreview" :src="sliderImagePreview" class="w-full h-48 object-cover rounded-xl mt-3" />
-            <div v-if="sliderFormError" class="error-box">{{ sliderFormError }}</div>
-            <div class="flex justify-end gap-3">
-              <button type="button" @click="showAddSliderModal = false" class="btn-ghost">Annuler</button>
-              <button type="submit" :disabled="submitting || !selectedSliderImage" class="btn-primary">
-                {{ submitting ? 'Ajout…' : 'Ajouter' }}
+
+          <!-- form : overflow-y-auto + max-h pour que les boutons restent visibles sur mobile -->
+          <form @submit.prevent="handleAddSliderImage" class="flex flex-col overflow-hidden">
+            <!-- Zone scrollable -->
+            <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              <input ref="sliderFileInput" type="file" accept="image/*" class="hidden" @change="handleSliderImageSelect" />
+
+              <!-- Zone de drop / sélection -->
+              <div
+                class="relative border-2 border-dashed rounded-xl transition-colors cursor-pointer"
+                :class="selectedSliderImage
+                  ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/10'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/10'"
+                @click="$refs.sliderFileInput.click()"
+                @dragover.prevent
+                @drop.prevent="onSliderDrop"
+              >
+                <!-- Preview image -->
+                <div v-if="sliderImagePreview" class="relative">
+                  <img
+                    :src="sliderImagePreview"
+                    class="w-full max-h-52 object-cover rounded-[10px]"
+                    alt="Prévisualisation"
+                  />
+                  <div class="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors rounded-[10px] flex items-center justify-center">
+                    <span class="opacity-0 hover:opacity-100 text-white text-xs font-semibold bg-black/60 px-3 py-1.5 rounded-lg transition-opacity">
+                      Changer l'image
+                    </span>
+                  </div>
+                </div>
+                <!-- Placeholder -->
+                <div v-else class="py-10 flex flex-col items-center gap-3 text-center px-4">
+                  <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Cliquez ou glissez une image</p>
+                    <p class="text-xs text-gray-400 mt-0.5">PNG, JPG, WebP — max 10 Mo</p>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="sliderFormError" class="error-box">{{ sliderFormError }}</div>
+            </div>
+
+            <!-- Boutons TOUJOURS visibles en bas — flex-shrink-0 empêche d'être poussé hors écran -->
+            <div class="flex gap-3 p-4 sm:p-6 pt-0 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+              <button
+                type="button"
+                @click="showAddSliderModal = false"
+                class="flex-1 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                :disabled="submitting || !selectedSliderImage"
+                class="flex-1 py-2.5 btn-primary text-sm flex items-center justify-center gap-2"
+              >
+                <svg v-if="submitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                {{ submitting ? 'Ajout en cours…' : 'Ajouter au slider' }}
               </button>
             </div>
           </form>
@@ -665,10 +762,10 @@ import { useRestaurants } from '../composables/useRestaurants'
 import { useStatistics } from '../composables/useStatistics'
 import { useSupabaseStorage } from '../composables/useSupabaseStorage'
 import { useToast } from '../composables/useToast'
+import { useCategories } from '../composables/useCategories'
 import { supabase } from '../config/supabaseConfig'
 
-const CUISINE_TYPES = ['Pâtisserie','Fastfood','Cuisine Africaine','Cuisine Française','Cuisine Italienne','Cuisine Asiatique','Pizzeria','Burger','Café','Bar','Restaurant Gastronomique']
-const MENU_CATEGORIES = ['Hamburger','Pizza','Salade','Sandwich','Viande','Volailles','Poissons','Pates','Dessert','Gâteau','Milkshakes','Smoothies','BubbleTea','Crepes','Cocktails','Cafe','Boisson','Entrée','Plat principal','Accompagnements','Plats locaux','Omelletes']
+// Catégories gérées dynamiquement via useCategories
 const DEFAULT_HORAIRE = () => ({ lundi:'08:00-20:00',mardi:'08:00-20:00',mercredi:'08:00-20:00',jeudi:'08:00-20:00',vendredi:'08:00-20:00',samedi:'09:00-22:00',dimanche:'09:00-22:00' })
 
 export default {
@@ -681,18 +778,23 @@ export default {
     const { getGlobalStats } = useStatistics()
     const { uploadMultipleImages } = useSupabaseStorage()
     const toast = useToast()
+    const { restaurantCategories, menuCategories, fetchCategories, addCategory, deleteCategory } = useCategories()
 
     onMounted(async () => {
-      if (isAdmin.value) await fetchRestaurants()
+      if (isAdmin.value) {
+        await Promise.all([fetchRestaurants(), fetchCategories()])
+      }
     })
 
-    return { user, authLoading, isAdmin, logout, restaurants, loading, fetchRestaurants, addRestaurant, updateRestaurant, deleteRestaurant, deleteAllRestaurantPhotos, menuLoading, fetchMenu, addMenuItem, updateMenuItem, deleteMenuItem, getGlobalStats, uploadMultipleImages, toast }
+    return { user, authLoading, isAdmin, logout, restaurants, loading, fetchRestaurants, addRestaurant, updateRestaurant, deleteRestaurant, deleteAllRestaurantPhotos, menuLoading, fetchMenu, addMenuItem, updateMenuItem, deleteMenuItem, getGlobalStats, uploadMultipleImages, toast, restaurantCategories, menuCategories, fetchCategories, addCategory, deleteCategory }
   },
 
   data() {
     return {
-      cuisineTypes: CUISINE_TYPES,
-      menuCategoryList: MENU_CATEGORIES,
+      // cuisineTypes et menuCategoryList viennent de useCategories (setup)
+      // UI pour ajouter une catégorie
+      newRestaurantCat: '', newRestaurantCatError: '', addingRestaurantCat: false,
+      newMenuCat: '', newMenuCatError: '', addingMenuCat: false,
 
       // Stats
       globalStats: { totalRestaurants:0, totalVisites:0, totalFavoris:0, usersWithFavorites:0 },
@@ -929,6 +1031,39 @@ export default {
       } catch (e) { this.formError = e.message; this.toast.error('Erreur: ' + e.message) }
       finally { this.submitting = false }
     },
+    // ── Catégories dynamiques ───────────────────────────────────────────────
+    async handleAddRestaurantCat() {
+      const nom = this.newRestaurantCat.trim()
+      if (!nom) return
+      this.addingRestaurantCat = true
+      this.newRestaurantCatError = ''
+      const result = await this.addCategory(nom, 'restaurant')
+      if (result.success) {
+        this.formData.type    = nom      // sélectionner auto la nouvelle catégorie
+        this.newRestaurantCat = ''
+        this.toast.success(`Catégorie "${nom}" ajoutée !`)
+      } else {
+        this.newRestaurantCatError = result.error
+      }
+      this.addingRestaurantCat = false
+    },
+
+    async handleAddMenuCat() {
+      const nom = this.newMenuCat.trim()
+      if (!nom) return
+      this.addingMenuCat = true
+      this.newMenuCatError = ''
+      const result = await this.addCategory(nom, 'menu')
+      if (result.success) {
+        this.menuItemFormData.categorie = nom   // sélectionner auto
+        this.newMenuCat = ''
+        this.toast.success(`Catégorie "${nom}" ajoutée !`)
+      } else {
+        this.newMenuCatError = result.error
+      }
+      this.addingMenuCat = false
+    },
+
     confirmDelete(r) { this.restaurantToDelete = r; this.showDeleteModal = true },
     async handleDelete() {
       this.submitting = true
@@ -1047,6 +1182,14 @@ export default {
         r.readAsDataURL(this.selectedSliderImage)
       }
     },
+    onSliderDrop(e) {
+      const file = e.dataTransfer.files?.[0]
+      if (!file || !file.type.startsWith('image/')) return
+      this.selectedSliderImage = file
+      const r = new FileReader()
+      r.onload = (ev) => { this.sliderImagePreview = ev.target.result }
+      r.readAsDataURL(file)
+    },
     async handleAddSliderImage() {
       if (!this.selectedSliderImage) return
       this.submitting = true
@@ -1113,7 +1256,8 @@ export default {
   @apply fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4;
 }
 .modal-box {
-  @apply bg-white dark:bg-gray-900 w-full sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 max-h-[95vh] flex flex-col overflow-hidden;
+  @apply bg-white dark:bg-gray-900 w-full sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 max-h-[92vh] flex flex-col;
+  /* overflow:hidden retiré — chaque section gère son propre scroll via overflow-y-auto */
 }
 .modal-header {
   @apply flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800 flex-shrink-0;

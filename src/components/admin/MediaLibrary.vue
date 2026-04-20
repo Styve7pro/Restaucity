@@ -47,24 +47,45 @@
               <button
                 v-for="img in filteredImages"
                 :key="img.url"
-                class="image-thumb relative group rounded-xl overflow-hidden border-2 transition-all duration-150 aspect-square"
+                class="image-thumb relative group rounded-xl overflow-hidden border-2 transition-all duration-150 aspect-square focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                 :class="selectedUrl === img.url
                   ? 'border-orange-500 ring-2 ring-orange-200 dark:ring-orange-900'
                   : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'"
                 @click="selectedUrl = img.url"
                 @dblclick="confirmSelection"
+                @mouseenter="hoveredImg = img.url"
+                @mouseleave="hoveredImg = null"
               >
-                <img :src="img.url" :alt="img.nom" loading="lazy" class="w-full h-full object-cover" @error="(e) => e.target.src='/placeholder.svg'" />
+                <img :src="img.url" :alt="img.nom" loading="lazy" class="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" @error="(e) => e.target.src='/placeholder.svg'" />
+
                 <!-- Overlay sélection -->
-                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-150 flex items-center justify-center">
-                  <div v-if="selectedUrl === img.url" class="w-7 h-7 bg-[var(--color-primary)] rounded-full flex items-center justify-center shadow-lg">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-150 flex items-start justify-end p-1.5">
+                  <div v-if="selectedUrl === img.url" class="w-6 h-6 bg-[var(--color-primary)] rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                   </div>
                 </div>
-                <!-- Tooltip nom -->
-                <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-1.5 py-1 truncate opacity-0 group-hover:opacity-100 transition-opacity">
-                  {{ img.nom }}
+
+                <!-- Nom + catégorie — overlay bas, toujours lisible -->
+                <div class="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 ease-out">
+                  <div class="bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-4 pb-2 px-2">
+                    <p class="text-white text-[.72rem] font-semibold leading-tight line-clamp-2 break-words">{{ img.nom }}</p>
+                    <p v-if="img.categorie" class="text-orange-300 text-[.65rem] mt-0.5 truncate">{{ img.categorie }}</p>
+                  </div>
                 </div>
+
+                <!-- Tooltip flottant pour noms très longs (visible si truncated) -->
+                <Teleport to="body">
+                  <div
+                    v-if="hoveredImg === img.url && img.nom && img.nom.length > 20"
+                    class="fixed z-[200] pointer-events-none"
+                    :style="tooltipStyle"
+                  >
+                    <div class="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg px-3 py-2 shadow-xl max-w-[200px] break-words leading-relaxed border border-gray-700 dark:border-gray-500">
+                      <p class="font-semibold">{{ img.nom }}</p>
+                      <p v-if="img.categorie" class="text-orange-300 mt-0.5 text-[.65rem]">{{ img.categorie }}</p>
+                    </div>
+                  </div>
+                </Teleport>
               </button>
             </div>
           </div>
@@ -113,9 +134,18 @@ export default {
       searchQuery: '',
       filterCategory: '',
       selectedUrl: '',
+      hoveredImg: null,
+      mouseX: 0,
+      mouseY: 0,
     }
   },
+
   computed: {
+    tooltipStyle() {
+      const x = Math.min(this.mouseX + 14, window.innerWidth - 220)
+      const y = Math.min(this.mouseY + 14, window.innerHeight - 80)
+      return { left: x + 'px', top: y + 'px' }
+    },
     availableCategories() {
       return [...new Set(this.images.map((i) => i.categorie).filter(Boolean))].sort()
     },
@@ -128,12 +158,22 @@ export default {
       })
     },
   },
+
   watch: {
     isOpen(val) {
       if (val) this.loadImages()
     },
   },
+
+  mounted() {
+    window.addEventListener('mousemove', this.trackMouse)
+  },
+  beforeUnmount() {
+    window.removeEventListener('mousemove', this.trackMouse)
+  },
+
   methods: {
+    trackMouse(e) { this.mouseX = e.clientX; this.mouseY = e.clientY },
     async loadImages() {
       this.loading = true
       this.selectedUrl = ''
